@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Climate Dashboard 2025</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #2C3E50;
+            --secondary: #3498DB;
+            --accent: #1ABC9C;
+            --light: #ECF0F1;
+            --dark: #2C3E50;
+            --text: #34495E;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: var(--text);
+            background-color: #f8fafc;
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.1) 0%, rgba(46, 204, 113, 0.1) 100%);
+        }
+
+        .card {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+        }
+
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .modal {
+            transition: all 0.3s ease;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--light);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--secondary);
+            border-radius: 4px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .tooltip {
+            position: relative;
+        }
+
+        .tooltip-text {
+            visibility: hidden;
+            width: 200px;
+            background-color: var(--dark);
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center">
+                        <i class="fas fa-cloud-sun text-2xl text-blue-500 mr-2"></i>
+                        <span class="text-xl font-semibold text-gray-800">ClimateVision</span>
+                    </div>
+                </div>
+                <div class="hidden sm:ml-6 sm:flex sm:items-center space-x-4">
+                    <a href="/" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-home mr-1"></i> Главная
+                    </a>
+                    <a href="/dashboard/" class="bg-blue-50 text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-chart-line mr-1"></i> Дашборд
+                    </a>
+                    <button onclick="toggleDataManagement()" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-database mr-1"></i> Управление данными
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Dashboard Header -->
+    <div class="gradient-bg py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto text-center">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mt-6">
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-teal-400">Аналитика</span>
+                <span class="text-gray-800">климатических данных</span>
+            </h1>
+            <p class="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
+                Интерактивная визуализация климатических показателей городов России за последнее время
+            </p>
+        </div>
+    </div>
+
+    <!-- Dashboard Filters -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-white rounded-lg shadow p-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Город</label>
+                <select id="city-filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">Все города</option>
+                    <!-- Cities will be populated dynamically -->
+                </select>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Период</label>
+                <select id="period-filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="7">Последние 7 дней</option>
+                    <option value="30" selected>Последние 30 дней</option>
+                    <option value="90">Последние 3 месяца</option>
+                    <option value="365">Последний год</option>
+                    <option value="custom">Произвольный период</option>
+                </select>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4 hidden" id="custom-date-range">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Произвольный период</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="date" id="date-from" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                    <input type="date" id="date-to" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4 flex items-center">
+                <button onclick="applyFilters()" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition flex items-center justify-center">
+                    <i class="fas fa-filter mr-2"></i> Применить фильтры
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Metrics -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <!-- Temperature Card -->
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                <div class="p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm font-medium">Средняя температура</p>
+                            <h3 class="text-3xl font-bold text-gray-800 mt-1" id="avg-temp">22.5°C</h3>
+                            <p class="text-green-500 text-sm mt-1 flex items-center">
+                                <i class="fas fa-arrow-up mr-1"></i> 2.4% за период
+                            </p>
+                        </div>
+                        <div class="text-blue-500 bg-blue-50 rounded-full p-3">
+                            <i class="fas fa-temperature-high text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Humidity Card -->
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                <div class="p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm font-medium">Средняя влажность</p>
+                            <h3 class="text-3xl font-bold text-gray-800 mt-1" id="avg-humidity">68%</h3>
+                            <p class="text-red-500 text-sm mt-1 flex items-center">
+                                <i class="fas fa-arrow-down mr-1"></i> 1.2% за период
+                            </p>
+                        </div>
+                        <div class="text-teal-500 bg-teal-50 rounded-full p-3">
+                            <i class="fas fa-tint text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wind Card -->
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                <div class="p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm font-medium">Скорость ветра</p>
+                            <h3 class="text-3xl font-bold text-gray-800 mt-1" id="avg-wind">3.2 м/с</h3>
+                            <p class="text-green-500 text-sm mt-1 flex items-center">
+                                <i class="fas fa-arrow-up mr-1"></i> 0.5% за период
+                            </p>
+                        </div>
+                        <div class="text-purple-500 bg-purple-50 rounded-full p-3">
+                            <i class="fas fa-wind text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pressure Card -->
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                <div class="p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm font-medium">Давление</p>
+                            <h3 class="text-3xl font-bold text-gray-800 mt-1" id="avg-pressure">1012 гПа</h3>
+                            <p class="text-gray-500 text-sm mt-1 flex items-center">
+                                <i class="fas fa-equals mr-1"></i> Без изменений
+                            </p>
+                        </div>
+                        <div class="text-orange-500 bg-orange-50 rounded-full p-3">
+                            <i class="fas fa-compress-alt text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Charts -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        <div class="dashboard-grid mb-8">
+            <!-- Temperature Chart -->
+            <div class="card rounded-xl p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">Температура по дням</h3>
+                    <div class="flex space-x-2">
+                        <button class="tooltip" onclick="changeTemperatureChart('line')">
+                            <i class="fas fa-chart-line text-gray-500 hover:text-blue-500"></i>
+                            <span class="tooltip-text">Линейный график</span>
+                        </button>
+                        <button class="tooltip" onclick="changeTemperatureChart('bar')">
+                            <i class="fas fa-chart-bar text-gray-500 hover:text-blue-500"></i>
+                            <span class="tooltip-text">Гистограмма</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="h-64">
+                    <canvas id="temperatureChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Humidity Chart -->
+            <div class="card rounded-xl p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">Влажность по дням</h3>
+                    <div class="flex space-x-2">
+                        <button class="tooltip" onclick="changeHumidityChart('line')">
+                            <i class="fas fa-chart-line text-gray-500 hover:text-teal-500"></i>
+                            <span class="tooltip-text">Линейный график</span>
+                        </button>
+                        <button class="tooltip" onclick="changeHumidityChart('bar')">
+                            <i class="fas fa-chart-bar text-gray-500 hover:text-teal-500"></i>
+                            <span class="tooltip-text">Гистограмма</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="h-64">
+                    <canvas id="humidityChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Wind Chart -->
+            <div class="card rounded-xl p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">Сила ветра</h3>
+                    <div class="flex space-x-2">
+                        <button class="tooltip" onclick="changeWindChart('bar')">
+                            <i class="fas fa-chart-bar text-gray-500 hover:text-purple-500"></i>
+                            <span class="tooltip-text">Гистограмма</span>
+                        </button>
+                        <button class="tooltip" onclick="changeWindChart('radar')">
+                            <i class="fas fa-chart-pie text-gray-500 hover:text-purple-500"></i>
+                            <span class="tooltip-text">Радар</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="h-64">
+                    <canvas id="windChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Weather Distribution -->
+            <div class="card rounded-xl p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">Распределение погоды</h3>
+                </div>
+                <div class="h-64">
+                    <canvas id="weatherChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Management Modal -->
+    <div id="data-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white p-6 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-2xl font-bold text-gray-800"><i class="fas fa-database mr-2 text-blue-500"></i>Управление климатическими данными</h3>
+                <button onclick="toggleDataManagement()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+
+            <div class="p-6">
+                <!-- Bulk Actions -->
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                    <h4 class="text-lg font-semibold mb-3 text-blue-800">Групповые операции</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Действие</label>
+                            <select id="bulk-action" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                                <option value="">Выберите действие</option>
+                                <option value="delete-city">Удалить все данные по городу</option>
+                                <option value="delete-period">Удалить данные за период</option>
+                                <option value="export-selected">Экспорт выбранных</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Город</label>
+                            <select id="bulk-city" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" disabled>
+                                <option value="">Выберите город</option>
+                                <!-- Cities will be populated dynamically -->
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Период</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="date" id="bulk-date-from" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" disabled>
+                                <input type="date" id="bulk-date-to" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" disabled>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-end mt-4">
+                        <button onclick="executeBulkAction()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition">
+                            Применить действие
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Data Table with Advanced Controls -->
+                <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                    <div class="p-4 border-b border-gray-200 flex flex-wrap justify-between items-center">
+                        <div class="mb-2 md:mb-0">
+                            <button onclick="openEditModal()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg mr-2">
+                                <i class="fas fa-plus mr-1"></i> Добавить
+                            </button>
+                            <button onclick="exportCSV()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg">
+                                <i class="fas fa-file-export mr-1"></i> Экспорт
+                            </button>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="relative mr-2">
+                                <input type="text" id="data-search" placeholder="Поиск..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                            </div>
+                            <select id="page-size" class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="10">10 строк</option>
+                                <option value="25" selected>25 строк</option>
+                                <option value="50">50 строк</option>
+                                <option value="100">100 строк</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white rounded-lg">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)">
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('city')">
+                                        Город <i class="fas fa-sort ml-1 text-gray-400"></i>
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('timestamp')">
+                                        Дата <i class="fas fa-sort ml-1 text-gray-400"></i>
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('temperature')">
+                                        Темп. (°C) <i class="fas fa-sort ml-1 text-gray-400"></i>
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('humidity')">
+                                        Влаж. (%) <i class="fas fa-sort ml-1 text-gray-400"></i>
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('wind_speed')">
+                                        Ветер (м/с) <i class="fas fa-sort ml-1 text-gray-400"></i>
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="data-table-body" class="divide-y divide-gray-200">
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="px-6 py-4 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center">
+                        <div class="mb-2 md:mb-0">
+                            <span id="pagination-info" class="text-sm text-gray-700"></span>
+                        </div>
+                        <div class="flex space-x-1">
+                            <button onclick="prevPage()" class="px-3 py-1 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" id="prev-page" disabled>
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <div id="page-numbers" class="flex space-x-1">
+                                <!-- Page numbers will be generated here -->
+                            </div>
+                            <button onclick="nextPage()" class="px-3 py-1 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" id="next-page">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="edit-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+            <div class="sticky top-0 bg-white p-6 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-gray-800" id="edit-modal-title"><i class="fas fa-plus-circle mr-2 text-blue-500"></i>Добавить запись</h3>
+                <button onclick="closeEditModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="p-6">
+                <form id="record-form">
+                    <input type="hidden" id="record-id">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="city">
+                            Город <span class="text-red-500">*</span>
+                        </label>
+                        <select id="city" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                            <option value="">Выберите город</option>
+                            <!-- Cities will be populated dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="temperature">
+                                Температура (°C) <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <input id="temperature" type="number" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                <span class="absolute right-3 top-2.5 text-gray-500">°C</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="humidity">
+                                Влажность (%) <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <input id="humidity" type="number" min="0" max="100" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                <span class="absolute right-3 top-2.5 text-gray-500">%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="pressure">
+                                Давление (гПа)
+                            </label>
+                            <div class="relative">
+                                <input id="pressure" type="number" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <span class="absolute right-3 top-2.5 text-gray-500">гПа</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="wind-speed">
+                                Ветер (м/с)
+                            </label>
+                            <div class="relative">
+                                <input id="wind-speed" type="number" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <span class="absolute right-3 top-2.5 text-gray-500">м/с</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="timestamp">
+                            Дата и время <span class="text-red-500">*</span>
+                        </label>
+                        <input id="timestamp" type="datetime-local" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-4">
+                        <button type="button" onclick="closeEditModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition">
+                            Отмена
+                        </button>
+                        <button type="submit" class="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition">
+                            Сохранить
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div class="sticky top-0 bg-white p-6 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-gray-800"><i class="fas fa-exclamation-triangle mr-2 text-yellow-500"></i>Подтверждение</h3>
+                <button onclick="closeConfirmModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="p-6">
+                <p class="text-gray-700 mb-6" id="confirm-message">Вы уверены, что хотите выполнить это действие?</p>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeConfirmModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition">
+                        Отмена
+                    </button>
+                    <button type="button" onclick="confirmAction()" class="px-6 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition" id="confirm-button">
+                        Подтвердить
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global data and state
+        let climateData = [];
+        let filteredData = [];
+        let currentPage = 1;
+        let pageSize = 25;
+        let sortColumn = 'timestamp';
+        let sortDirection = 'desc';
+        let chartReferences = {};
+        let selectedRecords = [];
+        let currentAction = null;
+
+        const cities = [
+            "Moscow", "Saint Petersburg", "Novosibirsk", "Ekaterinburg", "Nizhny Novgorod",
+            "Kazan", "Chelyabinsk", "Omsk", "Rostov-on-Don", "Ufa",
+            "Volgograd", "Krasnoyarsk", "Saratov", "Tyumen", "Tolyatti",
+            "Izhevsk", "Barnaul", "Khabarovsk", "Vladivostok", "Kaliningrad"
+        ];
+
+        const cityTranslations = {
+            "Moscow": "Москва",
+            "Saint Petersburg": "Санкт-Петербург",
+            "Novosibirsk": "Новосибирск",
+            "Ekaterinburg": "Екатеринбург",
+            "Nizhny Novgorod": "Нижний Новгород",
+            "Kazan": "Казань",
+            "Chelyabinsk": "Челябинск",
+            "Omsk": "Омск",
+            "Rostov-on-Don": "Ростов-на-Дону",
+            "Ufa": "Уфа",
+            "Volgograd": "Волгоград",
+            "Krasnoyarsk": "Красноярск",
+            "Saratov": "Саратов",
+            "Tyumen": "Тюмень",
+            "Tolyatti": "Тольятти",
+            "Izhevsk": "Ижевск",
+            "Barnaul": "Барнаул",
+            "Khabarovsk": "Хабаровск",
+            "Vladivostok": "Владивосток",
+            "Kaliningrad": "Калининград"
+        };
+
+        // DOM Ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize filters
+            initializeFilters();
+
+            // Load data from backend
+            loadData().then(() => {
+                renderDashboard();
+                renderDataTable();
+            });
+
+            // Set up event listeners
+            document.getElementById('period-filter').addEventListener('change', function() {
+                const customRange = document.getElementById('custom-date-range');
+                if (this.value === 'custom') {
+                    customRange.classList.remove('hidden');
+                } else {
+                    customRange.classList.add('hidden');
+                }
+            });
+
+            document.getElementById('bulk-action').addEventListener('change', function() {
+                const citySelect = document.getElementById('bulk-city');
+                const dateFrom = document.getElementById('bulk-date-from');
+                const dateTo = document.getElementById('bulk-date-to');
+
+                citySelect.disabled = this.value !== 'delete-city';
+                dateFrom.disabled = this.value !== 'delete-period';
+                dateTo.disabled = this.value !== 'delete-period';
+            });
+
+            document.getElementById('data-search').addEventListener('input', function() {
+                currentPage = 1;
+                renderDataTable();
+            });
+
+            document.getElementById('page-size').addEventListener('change', function() {
+                pageSize = parseInt(this.value);
+                currentPage = 1;
+                renderDataTable();
+            });
+
+            document.getElementById('record-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveRecord();
+            });
+        });
+
+        // Load data from backend
+        async function loadData() {
+            try {
+                const response = await fetch('/api/data');
+                climateData = await response.json();
+
+                // Add IDs if not present (for backward compatibility)
+                climateData.forEach((item, index) => {
+                    if (!item.id) {
+                        item.id = index.toString();
+                    }
+                });
+
+                // Sort by timestamp by default
+                climateData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                // Clone for filtered data
+                filteredData = [...climateData];
+            } catch (error) {
+                console.error('Error loading data:', error);
+                alert('Ошибка загрузки данных');
+            }
+        }
+
+        // Save record to backend
+        async function saveRecord() {
+            const id = document.getElementById('record-id').value;
+            const city = document.getElementById('city').value;
+            const temperature = document.getElementById('temperature').value;
+            const humidity = document.getElementById('humidity').value;
+            const pressure = document.getElementById('pressure').value;
+            const windSpeed = document.getElementById('wind-speed').value;
+            const timestamp = document.getElementById('timestamp').value;
+
+            // Basic validation
+            if (!city || !timestamp || !temperature || !humidity) {
+                alert('Пожалуйста, заполните обязательные поля');
+                return;
+            }
+
+            const formattedTimestamp = new Date(timestamp).toISOString().slice(0, 19).replace('T', ' ');
+
+            const record = {
+                id: id || Math.random().toString(36).substr(2, 9),
+                city,
+                timestamp: formattedTimestamp,
+                temperature,
+                feels_like: temperature,
+                pressure: pressure || null,
+                humidity,
+                wind_speed: windSpeed || null,
+                weather_description: "n/a"
+            };
+
+            try {
+                if (id) {
+                    // Update existing record
+                    await fetch(`/api/data/${id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(record)
+                    });
+                } else {
+                    // Add new record
+                    await fetch('/api/data', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(record)
+                    });
+                }
+
+                // Reload data
+                await loadData();
+                renderDataTable();
+                renderDashboard();
+                closeEditModal();
+
+                alert('Данные успешно сохранены');
+            } catch (error) {
+                console.error('Error saving data:', error);
+                alert('Ошибка сохранения данных');
+            }
+        }
+
+        // Delete record from backend
+        async function deleteRecord(id) {
+            if (!confirm('Вы уверены, что хотите удалить эту запись?')) {
+                return;
+            }
+
+            try {
+                await fetch(`/api/data/${id}`, {
+                    method: 'DELETE'
+                });
+
+                // Reload data
+                await loadData();
+                renderDataTable();
+                renderDashboard();
+
+                alert('Запись успешно удалена');
+            } catch (error) {
+                console.error('Error deleting data:', error);
+                alert('Ошибка удаления данных');
+            }
+        }
+
+        // Execute bulk operation
+        async function executeBulkAction() {
+            const action = document.getElementById('bulk-action').value;
+            const city = document.getElementById('bulk-city').value;
+            const dateFrom = document.getElementById('bulk-date-from').value;
+            const dateTo = document.getElementById('bulk-date-to').value;
+
+            if (!action) {
+                alert('Выберите действие');
+                return;
+            }
+
+            let params = {};
+            let confirmMessage = '';
+
+            if (action === 'delete-city') {
+                if (!city) {
+                    alert('Выберите город');
+                    return;
+                }
+                params = { city };
+                confirmMessage = `Вы уверены, что хотите удалить все данные по городу ${cityTranslations[city] || city}?`;
+            } else if (action === 'delete-period') {
+                if (!dateFrom || !dateTo) {
+                    alert('Укажите период');
+                    return;
+                }
+                params = { date_from: dateFrom, date_to: dateTo };
+                confirmMessage = `Вы уверены, что хотите удалить все данные с ${dateFrom} по ${dateTo}?`;
+            }
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/data/bulk', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        operation: action.replace('delete-', ''),
+                        params
+                    })
+                });
+
+                const result = await response.json();
+
+                // Reload data
+                await loadData();
+                renderDataTable();
+                renderDashboard();
+
+                alert(`Успешно выполнено. Удалено записей: ${result.deleted}`);
+                toggleDataManagement();
+            } catch (error) {
+                console.error('Error executing bulk action:', error);
+                alert('Ошибка выполнения операции');
+            }
+        }
+
+        // Export data to CSV
+        async function exportCSV() {
+            try {
+                // Trigger download
+                window.location.href = '/api/export';
+            } catch (error) {
+                console.error('Error exporting data:', error);
+                alert('Ошибка экспорта данных');
+            }
+        }
+
+    </script>

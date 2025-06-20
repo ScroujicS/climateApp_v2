@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Climate Dashboard 2025</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2C3E50;
+            --secondary: #3498DB;
+            --accent: #1ABC9C;
+            --light: #ECF0F1;
+            --dark: #2C3E50;
+            --text: #34495E;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: var(--text);
+            background-color: #f8fafc;
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.1) 0%, rgba(46, 204, 113, 0.1) 100%);
+        }
+
+        .card {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+        }
+
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        /* Smooth transitions for modals */
+        .modal {
+            transition: all 0.3s ease;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--light);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--secondary);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Welcome Screen -->
+    <div id="welcome-screen" class="min-h-screen flex flex-col items-center justify-center gradient-bg p-6">
+        <div class="text-center max-w-4xl">
+            <h1 class="text-5xl md:text-6xl font-bold mb-6 text-gray-800">
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-teal-400">Climate</span>
+                <span class="text-gray-800">Dashboard 2025</span>
+            </h1>
+            <p class="text-xl text-gray-600 mb-10 leading-relaxed">
+                Современная платформа для мониторинга и анализа климатических данных городов России.
+                Интуитивное управление, точные показатели и красивый визуал.
+            </p>
+
+            <div class="flex flex-col sm:flex-row justify-center gap-4 mb-16">
+                <a href="/dash/"
+                    class="px-8 py-3 bg-gradient-to-r from-blue-500 to-teal-400 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                    onclick="event.preventDefault(); window.location.href='/dash/'"><i class="fas fa-chart-line mr-2"></i> Перейти к дашборду
+                </a>
+
+                <button onclick="toggleDataManagement()"
+                   class="px-8 py-3 bg-white text-gray-700 font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 hover:border-blue-300 transform hover:scale-105">
+                   <i class="fas fa-database mr-2"></i> Управление данными
+                </button>
+            </div>
+
+            <div class="animate-float">
+                <img src="https://cdn-icons-png.flaticon.com/512/2933/2933245.png" alt="Earth" class="w-40 h-40 mx-auto opacity-90">
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Management Modal -->
+    <div id="data-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white p-6 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-2xl font-bold text-gray-800">Управление климатическими данными</h3>
+                <button onclick="toggleDataManagement()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+
+            <div class="p-6">
+                <!-- Data Controls -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <!-- Import Data -->
+                    <div class="card p-6 rounded-xl">
+                        <h4 class="text-lg font-semibold mb-4 text-gray-800"><i class="fas fa-file-import mr-2 text-blue-500"></i>Импорт данных</h4>
+                        <p class="text-gray-600 mb-4">Загрузите CSV-файл с климатическими данными</p>
+                        <div class="flex flex-col">
+                            <input type="file" id="csv-import" accept=".csv" class="mb-2">
+                            <button onclick="importCSV()" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition">
+                                Импортировать
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Export Data -->
+                    <div class="card p-6 rounded-xl">
+                        <h4 class="text-lg font-semibold mb-4 text-gray-800"><i class="fas fa-file-export mr-2 text-green-500"></i>Экспорт данных</h4>
+                        <p class="text-gray-600 mb-4">Скачайте текущие данные в CSV-файл</p>
+                        <button onclick="exportCSV()" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition">
+                            Экспортировать CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Data Table -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white rounded-lg overflow-hidden">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Город</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Дата</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Темп.</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Влаж.</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="data-table-body" class="divide-y divide-gray-200">
+                            <!-- Data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="edit-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div class="sticky top-0 bg-white p-6 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-gray-800" id="edit-modal-title">Добавить запись</h3>
+                <button onclick="closeEditModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="p-6">
+                <form id="record-form">
+                    <input type="hidden" id="record-id">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="city">
+                            Город
+                        </label>
+                        <select id="city" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Выберите город</option>
+                            <!-- Cities will be populated dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="temperature">
+                                Температура (°C)
+                            </label>
+                            <input id="temperature" type="number" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="humidity">
+                                Влажность (%)
+                            </label>
+                            <input id="humidity" type="number" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="pressure">
+                                Давление (гПа)
+                            </label>
+                            <input id="pressure" type="number" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="wind-speed">
+                                Ветер (м/с)
+                            </label>
+                            <input id="wind-speed" type="number" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="timestamp">
+                            Дата и время
+                        </label>
+                        <input id="timestamp" type="datetime-local" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-4">
+                        <button type="button" onclick="closeEditModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition">
+                            Отмена
+                        </button>
+                        <button type="button" onclick="saveRecord()" class="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition">
+                            Сохранить
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global data
+        let climateData = [];
+        const cities = [
+            "Moscow", "Saint Petersburg", "Novosibirsk", "Ekaterinburg", "Nizhny Novgorod",
+            "Kazan", "Chelyabinsk", "Omsk", "Rostov-on-Don", "Ufa",
+            "Volgograd", "Krasnoyarsk", "Saratov", "Tyumen", "Tolyatti",
+            "Izhevsk", "Barnaul", "Khabarovsk", "Vladivostok", "Kaliningrad"
+        ];
+
+        // Translate city names to Russian for display
+        const cityTranslations = {
+            "Moscow": "Москва",
+            "Saint Petersburg": "Санкт-Петербург",
+            "Novosibirsk": "Новосибирск",
+            "Ekaterinburg": "Екатеринбург",
+            "Nizhny Novgorod": "Нижний Новгород",
+            "Kazan": "Казань",
+            "Chelyabinsk": "Челябинск",
+            "Omsk": "Омск",
+            "Rostov-on-Don": "Ростов-на-Дону",
+            "Ufa": "Уфа",
+            "Volgograd": "Волгоград",
+            "Krasnoyarsk": "Красноярск",
+            "Saratov": "Саратов",
+            "Tyumen": "Тюмень",
+            "Tolyatti": "Тольятти",
+            "Izhevsk": "Ижевск",
+            "Barnaul": "Барнаул",
+            "Khabarovsk": "Хабаровск",
+            "Vladivostok": "Владивосток",
+            "Kaliningrad": "Калининград"
+        };
+
+        // DOM Ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load cities into select
+            const citySelect = document.getElementById('city');
+            cities.forEach(city => {
+                const option = document.createElement('option');
+                option.value = city;
+                option.textContent = cityTranslations[city] || city;
+                citySelect.appendChild(option);
+            });
+
+            // Load data
+            loadData();
+        });
+
+        // Toggle data management modal
+        function toggleDataManagement() {
+            const modal = document.getElementById('data-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        // Close edit modal
+        function closeEditModal() {
+            document.getElementById('edit-modal').classList.add('hidden');
+        }
+
+        // Load climate data
+        function loadData() {
+            // In a real app, this would fetch from CSV/API
+            // For demo, we'll use a mock fetch
+            climateData = []; // Reset
+            fetch('/mock_climate_data.csv')
+                .then(response => response.text())
+                .then(csvText => {
+                    // Parse CSV (simplified)
+                    const lines = csvText.split('\n');
+                    const headers = lines[0].split(',');
+
+                    for (let i = 1; i < lines.length; i++) {
+                        if (lines[i].trim() === '') continue;
+
+                        const values = lines[i].split(',');
+                        const record = {};
+
+                        headers.forEach((header, index) => {
+                            record[header.trim()] = values[index] ? values[index].trim() : '';
+                        });
+
+                        climateData.push(record);
+                    }
+
+                    renderDataTable();
+                })
+                .catch(error => {
+                    console.error('Error loading data:', error);
+                    // For demo, show some mock data
+                    climateData = [
+                        {
+                            city: "Moscow",
+                            timestamp: "2025-06-18 12:00:00",
+                            temperature: "16.38",
+                            humidity: "77",
+                            pressure: "1005",
+                            wind_speed: "1.67",
+                            weather_description: "overcast clouds"
+                        },
+                        {
+                            city: "Saint Petersburg",
+                            timestamp: "2025-06-18 12:01:00",
+                            temperature: "15.08",
+                            humidity: "88",
+                            pressure: "1004",
+                            wind_speed: "4.00",
+                            weather_description: "broken clouds"
+                        }
+                    ];
+                    renderDataTable();
+                });
+        }
+
+        // Render data table
+        function renderDataTable() {
+            const tbody = document.getElementById('data-table-body');
+            tbody.innerHTML = '';
+
+            climateData.forEach((record, index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 transition';
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">${cityTranslations[record.city] || record.city}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${record.timestamp || '-'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${record.temperature || '-'}°C</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${record.humidity || '-'}%</td>
+                    <td class="px-6 py-4 whitespace-nowrap flex gap-2">
+                        <button onclick="openEditModal(${index})" class="text-blue-500 hover:text-blue-700">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="deleteRecord(${index})" class="text-red-500 hover:text-red-700">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Open edit modal (if index is provided, it's edit mode)
+        function openEditModal(index = null) {
+            const modal = document.getElementById('edit-modal');
+            const form = document.getElementById('record-form');
+            const title = document.getElementById('edit-modal-title');
+
+            if (index !== null) {
+                // Edit mode
+                title.textContent = 'Редактировать запись';
+                const record = climateData[index];
+
+                document.getElementById('record-id').value = index;
+                document.getElementById('city').value = record.city;
+                document.getElementById('temperature').value = record.temperature;
+                document.getElementById('humidity').value = record.humidity;
+                document.getElementById('pressure').value = record.pressure;
+                document.getElementById('wind-speed').value = record.wind_speed;
+
+                // Format timestamp for datetime-local input
+                if (record.timestamp) {
+                    const dt = new Date(record.timestamp);
+                    const formatted = dt.toISOString().slice(0, 16);
+                    document.getElementById('timestamp').value = formatted;
+                }
+            } else {
+                // Add mode
+                title.textContent = 'Добавить запись';
+                form.reset();
+                document.getElementById('timestamp').value = new Date().toISOString().slice(0, 16);
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        // Save record
+        function saveRecord() {
+            const index = document.getElementById('record-id').value;
+            const city = document.getElementById('city').value;
+            const temperature = document.getElementById('temperature').value;
+            const humidity = document.getElementById('humidity').value;
+            const pressure = document.getElementById('pressure').value;
+            const windSpeed = document.getElementById('wind-speed').value;
+            const timestamp = document.getElementById('timestamp').value;
+
+            // Basic validation
+            if (!city || !timestamp) {
+                alert('Пожалуйста, заполните обязательные поля');
+                return;
+            }
+
+            const formattedTimestamp = new Date(timestamp).toISOString().slice(0, 19).replace('T', ' ');
+
+            const record = {
+                city,
+                timestamp: formattedTimestamp,
+                temperature,
+                feels_like: temperature, // Simple assumption
+                pressure,
+                humidity,
+                wind_speed: windSpeed,
+                weather_description: "n/a" // In a real app, this would come from weather API
+            };
+
+            if (index) {
+                // Update existing record
+                climateData[index] = record;
+            } else {
+                // Add new record
+                climateData.push(record);
+            }
+
+            // In a real app, this would save to CSV/API
+            console.log('Saving record:', record);
+            alert('Запись сохранена (в реальном приложении это сохранилось бы в CSV)');
+
+            renderDataTable();
+            closeEditModal();
+        }
+
+        // Delete record
+        function deleteRecord(index) {
+            if (confirm('Вы уверены, что хотите удалить эту запись?')) {
+                climateData.splice(index, 1);
+                renderDataTable();
+                // In a real app, this would delete from CSV/API
+                alert('Запись удалена (в реальном приложении это удалилось бы из CSV)');
+            }
+        }
+
+        // Import CSV
+        function importCSV() {
+            const fileInput = document.getElementById('csv-import');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Пожалуйста, выберите CSV файл');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const contents = e.target.result;
+                // Parse CSV and update data
+                // In a real app, this would save to backend/CSV
+                alert('Данные импортированы');
+                toggleDataManagement();
+            };
+            reader.readAsText(file);
+        }
+
+        // Export CSV
+        function exportCSV() {
+            if (climateData.length === 0) {
+                alert('Нет данных для экспорта');
+                return;
+            }
+
+            // Prepare CSV content
+            const headers = Object.keys(climateData[0]).join(',');
+            const rows = climateData.map(record =>
+                Object.values(record).map(value =>
+                    `"${value !== null && value !== undefined ? value.toString().replace(/"/g, '""') : ''}"`
+                ).join(',')
+            ).join('\n');
+
+            const csvContent = `${headers}\n${rows}`;
+
+            // Create download link
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', `climate_data_export_${new Date().toISOString().slice(0, 10)}.csv`);
+            link.style.visibility = 'hidden';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
+
